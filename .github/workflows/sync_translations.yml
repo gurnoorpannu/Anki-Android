@@ -3,6 +3,12 @@ name: 🌐 Sync Translations
 on:
   workflow_dispatch:
 
+# Ensure only one sync workflow runs at a time
+# Cancel any in-progress runs when a new one is triggered
+concurrency:
+  group: translation-sync
+  cancel-in-progress: true
+
 # We use a machine account PAT from secrets so workflows are triggered
 # the default token is not needed and should be fully restricted
 permissions: {}
@@ -10,10 +16,17 @@ permissions: {}
 jobs:
   sync_translations:
     name: 'Sync Translations with Crowdin'
-    timeout-minutes: 20
+    timeout-minutes: 50
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - name: Wait 30 minutes before sync
+        run: |
+          echo "Waiting 30 minutes to respect Crowdin rate limiting..."
+          echo "Sync will start at: $(date -u -d '+30 minutes' '+%Y-%m-%d %H:%M:%S UTC')"
+          sleep 1800
+        shell: bash
+
+      - uses: actions/checkout@v4
         with:
           token: ${{ secrets.MACHINE_ACCOUNT_PAT }}
           ref: 'main'
@@ -32,7 +45,7 @@ jobs:
           git reset --hard origin/main
         shell: bash
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
       
